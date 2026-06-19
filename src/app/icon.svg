@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="SignBridge">
+  <rect width="100" height="100" rx="24" fill="#1dda63"/>
+  <g fill="#ffffff">
+    <!-- thumb (extended up-left) -->
+    <rect x="13" y="49" width="13" height="27" rx="6.5" transform="rotate(-38 33 65)"/>
+    <!-- index finger (extended) -->
+    <rect x="37" y="17" width="13" height="46" rx="6.5"/>
+    <!-- pinky finger (extended) -->
+    <rect x="60" y="27" width="11" height="37" rx="5.5"/>
+    <!-- palm (middle & ring folded in) -->
+    <rect x="33" y="48" width="41" height="33" rx="14"/>
+  </g>
+</svg>
