@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { BookOpen, Camera, Globe, Trophy, Heart, Users, ArrowRight, Sparkles } from 'lucide-react';
 import { signLanguages } from '@/lib/signs/languages';
 import { getSignsByLanguage } from '@/lib/signs/sign-data';
+import { asset } from '@/lib/asset';
 
 const SignPlayer = dynamic(
   () => import('@/components/avatar/SignPlayer').then(m => ({ default: m.SignPlayer })),
@@ -121,7 +122,7 @@ export default function HomePage() {
               {/* Real photo */}
               <div className="mt-10 relative rounded-2xl overflow-hidden shadow-xl border border-white/10">
                 <Image
-                  src="/images/hero-signing.jpg"
+                  src={asset("/images/hero-signing.jpg")}
                   alt="Person practicing sign language on a video call"
                   width={800}
                   height={533}
@@ -252,7 +253,7 @@ export default function HomePage() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="relative rounded-2xl overflow-hidden shadow-xl">
             <Image
-              src="/images/community.jpg"
+              src={asset("/images/community.jpg")}
               alt="Person signing during a video call at a library"
               width={800}
               height={533}

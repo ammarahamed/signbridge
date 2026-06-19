@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { asset } from '@/lib/asset';
 
 const ASL_ALPHABET = new Set('abcdefghijklmnopqrstuvwxyz'.split(''));
 
@@ -8,7 +9,7 @@ export function getSignImagePath(sign: { gloss: string; language: string }): str
   if (sign.language !== 'asl') return null;
   const letter = sign.gloss.toLowerCase();
   if (letter.length === 1 && ASL_ALPHABET.has(letter)) {
-    return `/images/signs/asl/${letter}.svg`;
+    return asset(`/images/signs/asl/${letter}.svg`);
   }
   return null;
 }
