@@ -1,21 +1,20 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Landmark } from '@/lib/signs/types';
 
 interface HandModelProps {
   landmarks: Landmark[];
-  color?: string;
-  opacity?: number;
 }
 
-const JOINT_RADIUS = 0.025;
-const BONE_RADIUS = 0.018;
-const PALM_COLOR = '#f4a261';
-const FINGER_COLOR = '#e9c46a';
-const TIP_COLOR = '#e76f51';
+// One unified skin tone so the hand reads as a single continuous form
+// (the old model used three clashing colors → "matchsticks").
+const SKIN = '#e3a578';
+const SKIN_PALM = '#d9966a';
+
+const BONE_RADIUS = 0.034;
+const JOINT_RADIUS = 0.037;
 
 const CONNECTIONS: [number, number][] = [
   // Thumb
@@ -28,21 +27,18 @@ const CONNECTIONS: [number, number][] = [
   [0, 13], [13, 14], [14, 15], [15, 16],
   // Pinky
   [0, 17], [17, 18], [18, 19], [19, 20],
-  // Palm connections
+  // Knuckle row (palm)
   [5, 9], [9, 13], [13, 17],
 ];
 
-const FINGERTIP_INDICES = [4, 8, 12, 16, 20];
+const TIP_INDICES = new Set([4, 8, 12, 16, 20]);
+const KNUCKLE_INDICES = new Set([0, 5, 9, 13, 17]);
 
-function Joint({ position, isTip }: { position: THREE.Vector3; isTip: boolean }) {
+function Joint({ position, radius }: { position: THREE.Vector3; radius: number }) {
   return (
-    <mesh position={position}>
-      <sphereGeometry args={[isTip ? JOINT_RADIUS * 1.3 : JOINT_RADIUS, 12, 12]} />
-      <meshStandardMaterial
-        color={isTip ? TIP_COLOR : PALM_COLOR}
-        roughness={0.4}
-        metalness={0.1}
-      />
+    <mesh position={position} castShadow>
+      <sphereGeometry args={[radius, 18, 18]} />
+      <meshStandardMaterial color={SKIN} roughness={0.62} metalness={0} />
     </mesh>
   );
 }
@@ -52,110 +48,68 @@ function Bone({ start, end }: { start: THREE.Vector3; end: THREE.Vector3 }) {
   const length = useMemo(() => start.distanceTo(end), [start, end]);
   const quaternion = useMemo(() => {
     const dir = new THREE.Vector3().subVectors(end, start).normalize();
-    const q = new THREE.Quaternion();
-    q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-    return q;
+    return new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
   }, [start, end]);
 
   return (
-    <mesh position={mid} quaternion={quaternion}>
-      <capsuleGeometry args={[BONE_RADIUS, length - BONE_RADIUS * 2, 4, 8]} />
-      <meshStandardMaterial
-        color={FINGER_COLOR}
-        roughness={0.5}
-        metalness={0.05}
-      />
+    <mesh position={mid} quaternion={quaternion} castShadow>
+      <capsuleGeometry args={[BONE_RADIUS, Math.max(0.001, length - BONE_RADIUS), 6, 14]} />
+      <meshStandardMaterial color={SKIN} roughness={0.6} metalness={0} />
     </mesh>
   );
 }
 
+// Solid, opaque palm filling the wrist → knuckle web.
 function PalmMesh({ positions }: { positions: THREE.Vector3[] }) {
   const geometry = useMemo(() => {
     if (positions.length < 21) return null;
     const geo = new THREE.BufferGeometry();
-    const wrist = positions[0];
-    const palmPoints = [wrist, positions[5], positions[9], positions[13], positions[17]];
-    const vertices: number[] = [];
-    const normals: number[] = [];
-
-    for (let i = 0; i < palmPoints.length - 1; i++) {
-      const a = palmPoints[0];
-      const b = palmPoints[i + 1];
-      const c = palmPoints[Math.min(i + 2, palmPoints.length - 1)];
-      vertices.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
-      const normal = new THREE.Vector3().crossVectors(
-        new THREE.Vector3().subVectors(b, a),
-        new THREE.Vector3().subVectors(c, a)
-      ).normalize();
-      for (let j = 0; j < 3; j++) normals.push(normal.x, normal.y, normal.z);
+    // Wrist + the two thumb-side joints + knuckle row → a fuller palm outline.
+    const palm = [positions[0], positions[1], positions[5], positions[9], positions[13], positions[17]];
+    const verts: number[] = [];
+    const addTri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) => {
+      verts.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+    };
+    for (let i = 1; i < palm.length - 1; i++) {
+      addTri(palm[0], palm[i], palm[i + 1]); // front
+      addTri(palm[0], palm[i + 1], palm[i]); // back
     }
-
-    // Back face
-    for (let i = 0; i < palmPoints.length - 1; i++) {
-      const a = palmPoints[0];
-      const b = palmPoints[Math.min(i + 2, palmPoints.length - 1)];
-      const c = palmPoints[i + 1];
-      vertices.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
-      const normal = new THREE.Vector3().crossVectors(
-        new THREE.Vector3().subVectors(b, a),
-        new THREE.Vector3().subVectors(c, a)
-      ).normalize();
-      for (let j = 0; j < 3; j++) normals.push(normal.x, normal.y, normal.z);
-    }
-
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    geo.computeVertexNormals();
     return geo;
   }, [positions]);
 
   if (!geometry) return null;
 
   return (
-    <mesh geometry={geometry}>
-      <meshStandardMaterial
-        color={PALM_COLOR}
-        roughness={0.6}
-        metalness={0.05}
-        side={THREE.DoubleSide}
-        transparent
-        opacity={0.6}
-      />
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial color={SKIN_PALM} roughness={0.7} metalness={0} side={THREE.DoubleSide} />
     </mesh>
   );
 }
 
-export function HandModel({ landmarks, color, opacity }: HandModelProps) {
-  const groupRef = useRef<THREE.Group>(null);
-
-  const positions = useMemo(() => {
-    return landmarks.map(([x, y, z]) => new THREE.Vector3(x, y, z));
-  }, [landmarks]);
-
-  const targetPositions = useRef(positions);
-  const currentPositions = useRef(positions.map(p => p.clone()));
-
-  useMemo(() => {
-    targetPositions.current = positions;
-  }, [positions]);
-
-  useFrame((_, delta) => {
-    const speed = 8;
-    for (let i = 0; i < currentPositions.current.length && i < targetPositions.current.length; i++) {
-      currentPositions.current[i].lerp(targetPositions.current[i], 1 - Math.exp(-speed * delta));
-    }
-  });
+export function HandModel({ landmarks }: HandModelProps) {
+  const positions = useMemo(
+    () => landmarks.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
+    [landmarks]
+  );
 
   if (landmarks.length < 21) return null;
 
   return (
-    <group ref={groupRef} scale={1.5} position={[0, -0.3, 0]}>
+    <group scale={1.5} position={[0, -0.3, 0]}>
       <PalmMesh positions={positions} />
-      {positions.map((pos, i) => (
-        <Joint key={`joint-${i}`} position={pos} isTip={FINGERTIP_INDICES.includes(i)} />
-      ))}
       {CONNECTIONS.map(([a, b], i) => (
         <Bone key={`bone-${i}`} start={positions[a]} end={positions[b]} />
       ))}
+      {positions.map((pos, i) => {
+        const radius = TIP_INDICES.has(i)
+          ? BONE_RADIUS * 0.9 // taper the fingertips
+          : KNUCKLE_INDICES.has(i)
+          ? JOINT_RADIUS * 1.15 // fuller knuckles
+          : JOINT_RADIUS;
+        return <Joint key={`joint-${i}`} position={pos} radius={radius} />;
+      })}
     </group>
   );
 }

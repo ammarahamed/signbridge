@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ClientLayout } from "./client-layout";
+
+// Reuses the existing mycocoon.life GA4 property; SignBridge appears under /signbridge paths.
+const GA_ID = "G-B280ZFSBQ4";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -52,6 +56,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col text-gray-900 dark:text-gray-100">
         <ClientLayout>{children}</ClientLayout>
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+        <Script id="ga4" strategy="afterInteractive">
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`}
+        </Script>
       </body>
     </html>
   );
