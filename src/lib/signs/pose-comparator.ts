@@ -12,6 +12,15 @@ const FINGER_JOINTS: Record<string, number[]> = {
 const FINGER_TIP_WEIGHT = 2.0;
 const FINGER_JOINT_WEIGHT = 1.0;
 
+// Leniency curve applied to each finger score. Webcam pose estimation is noisy,
+// so raw scores run low and discourage learners. This boosts honest mid-range
+// attempts without making a perfect score trivial:
+//   raw 40 -> 53, 50 -> 62, 60 -> 70, 70 -> 78, 90 -> 93, 100 -> 100.
+const LENIENCY_EXPONENT = 0.7;
+function applyLeniency(score: number): number {
+  return 100 * Math.pow(Math.max(0, score) / 100, LENIENCY_EXPONENT);
+}
+
 function normalize(landmarks: Landmark[], flipY = false): Landmark[] {
   if (landmarks.length < 21) return landmarks;
 
@@ -139,7 +148,8 @@ export function comparePoses(
     const tipDist = euclideanDistance(refNorm[tipIdx], userNorm[tipIdx]);
     const tipScore = Math.max(0, 1 - tipDist * 0.8);
 
-    const fingerScore = (curlSim * 0.7 + tipScore * 0.3) * 100;
+    const rawFingerScore = (curlSim * 0.7 + tipScore * 0.3) * 100;
+    const fingerScore = applyLeniency(rawFingerScore);
     fingerScores[finger] = Math.round(fingerScore);
 
     const weight = finger === 'thumb' ? FINGER_TIP_WEIGHT : FINGER_JOINT_WEIGHT;

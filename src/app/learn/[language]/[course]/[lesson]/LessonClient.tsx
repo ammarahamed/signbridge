@@ -60,7 +60,7 @@ export default function LessonClient() {
     if (result.score > bestScore) {
       setBestScore(result.score);
     }
-    if (currentSign && result.score >= 70 && !passedRef.current) {
+    if (currentSign && result.score >= 60 && !passedRef.current) {
       passedRef.current = true;
       setPassed(true);
       recordPractice(currentSign.id, result.score);
