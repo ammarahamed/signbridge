@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Hand, Search, Trophy, Menu, X } from 'lucide-react';
+import { BookOpen, Hand, Search, Trophy, Menu, X, Languages, MessagesSquare } from 'lucide-react';
 import { useState } from 'react';
 
 const navLinks = [
   { href: '/learn', label: 'Learn', icon: BookOpen },
   { href: '/practice', label: 'Practice', icon: Hand },
+  { href: '/translate', label: 'Translate', icon: Languages },
+  { href: '/conversation', label: 'Talk', icon: MessagesSquare },
   { href: '/dictionary', label: 'Dictionary', icon: Search },
   { href: '/progress', label: 'Progress', icon: Trophy },
 ];
