@@ -20,7 +20,7 @@ export function Footer() {
                 an accessibility advocate, we&apos;d genuinely love to work with you.
               </p>
               <a
-                href="mailto:ammarbusiness097@gmail.com?subject=SignBridge%20%E2%80%94%20let%27s%20collaborate"
+                href="mailto:ammar@mycocoon.life?subject=SignBridge%20%E2%80%94%20let%27s%20collaborate"
                 className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-lg bg-[#1dda63] text-white text-sm font-medium hover:bg-[#15b850] transition-colors"
               >
                 <Mail className="w-4 h-4" />
