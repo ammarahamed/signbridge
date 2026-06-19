@@ -245,8 +245,11 @@ export function WebcamPractice({ targetLandmarks, onScore, className = '' }: Web
         <div className="mt-3 space-y-2">
           {result && (
             <div className={`p-3 rounded-lg border ${scoreBg}`}>
+              {/* scoreBg is always a light *-50 background (no dark variant),
+                  so force dark text — otherwise it inherits the page's
+                  near-white text in dark mode and becomes invisible. */}
               {result.hints.map((hint, i) => (
-                <p key={i} className="text-sm">{hint}</p>
+                <p key={i} className="text-sm text-gray-800">{hint}</p>
               ))}
             </div>
           )}
