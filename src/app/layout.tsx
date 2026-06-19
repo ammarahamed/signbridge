@@ -13,11 +13,31 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const title = "SignBridge — Learn Sign Language for Free";
+const description =
+  "Free, open-source sign language learning platform with 3D hand demonstrations, webcam practice, text-to-sign translation and live conversation. Learn ASL, BSL, ISL and more.";
+
 export const metadata: Metadata = {
-  title: "SignBridge — Learn Sign Language for Free",
-  description:
-    "Free, open-source sign language learning platform with 3D hand demonstrations and webcam practice. Learn ASL, BSL, ISL and more.",
-  keywords: ["sign language", "ASL", "BSL", "ISL", "learn", "free", "open source", "accessibility"],
+  metadataBase: new URL("https://mycocoon.life"),
+  title,
+  description,
+  keywords: ["sign language", "ASL", "BSL", "ISL", "learn", "free", "open source", "accessibility", "deaf", "fingerspelling"],
+  openGraph: {
+    title,
+    description,
+    url: "https://mycocoon.life/signbridge",
+    siteName: "SignBridge",
+    type: "website",
+    images: [
+      { url: "https://mycocoon.life/signbridge/og.png", width: 1200, height: 630, alt: "SignBridge — learn sign language, free and open-source" },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["https://mycocoon.life/signbridge/og.png"],
+  },
 };
 
 export default function RootLayout({
