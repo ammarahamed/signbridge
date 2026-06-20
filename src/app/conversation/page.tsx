@@ -35,6 +35,29 @@ function getRecognitionCtor(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+// Hide macOS novelty/joke voices from the picker.
+const NOVELTY = new Set([
+  'Albert', 'Bad News', 'Bahh', 'Bells', 'Boing', 'Bubbles', 'Cellos', 'Good News',
+  'Jester', 'Organ', 'Superstar', 'Trinoids', 'Whisper', 'Wobble', 'Zarvox', 'Junior',
+  'Kathy', 'Princess', 'Deranged', 'Hysterical', 'Pipe Organ', 'Ralph', 'Fred',
+]);
+
+function rankVoice(v: SpeechSynthesisVoice): number {
+  const n = v.name;
+  if (n === 'Google US English') return 0;
+  if (/google/i.test(n)) return 1;
+  if (/natural|premium|enhanced|neural/i.test(n)) return 2;
+  if (n === 'Samantha') return 3;
+  if (!v.localService) return 4;
+  return 5;
+}
+
+function englishVoices(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice[] {
+  return voices
+    .filter(v => v.lang?.toLowerCase().startsWith('en') && !NOVELTY.has(v.name))
+    .sort((a, b) => rankVoice(a) - rankVoice(b) || a.name.localeCompare(b.name));
+}
+
 export default function ConversationPage() {
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
@@ -44,6 +67,8 @@ export default function ConversationPage() {
 
   const [typed, setTyped] = useState('');
   const [speaking, setSpeaking] = useState(false);
+  const [voiceList, setVoiceList] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceName, setVoiceName] = useState('');
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
@@ -52,7 +77,18 @@ export default function ConversationPage() {
     setSupported(getRecognitionCtor() !== null);
     const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
     // Voices load asynchronously — grab them now and on the change event.
-    const loadVoices = () => { if (synth) voicesRef.current = synth.getVoices(); };
+    const loadVoices = () => {
+      if (!synth) return;
+      voicesRef.current = synth.getVoices();
+      const list = englishVoices(voicesRef.current);
+      setVoiceList(list);
+      setVoiceName(prev => {
+        if (prev) return prev;
+        const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('sb-voice') : null;
+        if (saved && list.some(v => v.name === saved)) return saved;
+        return list[0]?.name ?? '';
+      });
+    };
     loadVoices();
     synth?.addEventListener?.('voiceschanged', loadVoices);
     return () => {
@@ -112,6 +148,7 @@ export default function ConversationPage() {
     // Prefer a natural-sounding voice over the robotic browser default.
     const voices = voicesRef.current.length ? voicesRef.current : window.speechSynthesis.getVoices();
     const voice =
+      (voiceName && voices.find(v => v.name === voiceName)) ||
       voices.find(v => v.name === 'Google US English') ||
       voices.find(v => v.lang === 'en-US' && /google|natural|premium|enhanced|neural|aria|jenny|samantha/i.test(v.name)) ||
       voices.find(v => v.name === 'Samantha') ||
@@ -218,16 +255,36 @@ export default function ConversationPage() {
             className="w-full p-4 rounded-xl border border-gray-300 dark:border-white/15 bg-white dark:bg-white/[0.04] text-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#1dda63]"
           />
 
-          <button
-            onClick={speak}
-            disabled={!typed.trim()}
-            className={`mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              speaking ? 'bg-[#15b850] text-white' : 'bg-[#1dda63] text-white hover:bg-[#15b850]'
-            }`}
-          >
-            <Volume2 className="w-4 h-4" />
-            {speaking ? 'Speaking…' : 'Speak aloud'}
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              onClick={speak}
+              disabled={!typed.trim()}
+              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                speaking ? 'bg-[#15b850] text-white' : 'bg-[#1dda63] text-white hover:bg-[#15b850]'
+              }`}
+            >
+              <Volume2 className="w-4 h-4" />
+              {speaking ? 'Speaking…' : 'Speak aloud'}
+            </button>
+
+            {voiceList.length > 1 && (
+              <select
+                value={voiceName}
+                onChange={(e) => {
+                  setVoiceName(e.target.value);
+                  try { localStorage.setItem('sb-voice', e.target.value); } catch {}
+                }}
+                aria-label="Choose voice"
+                className="bg-white/[0.04] border border-white/15 rounded-xl px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#1dda63] max-w-[220px]"
+              >
+                {voiceList.map((v) => (
+                  <option key={v.name} value={v.name} className="bg-[#0a0a0a]">
+                    {v.name} ({v.lang})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
 
           {typed.trim() && (
             <div className="mt-5 rounded-xl bg-gray-50 dark:bg-white/[0.04] p-4">
