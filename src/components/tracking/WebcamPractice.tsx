@@ -1,9 +1,37 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, CameraOff, Loader2 } from 'lucide-react';
+import { Camera, CameraOff, Loader2, Hand } from 'lucide-react';
 import { Landmark, PoseComparisonResult } from '@/lib/signs/types';
 import { comparePoses } from '@/lib/signs/pose-comparator';
+
+function scoreHex(s: number): string {
+  return s >= 80 ? '#1dda63' : s >= 60 ? '#eab308' : s >= 40 ? '#f97316' : '#ef4444';
+}
+function statusLabel(s: number): string {
+  return s >= 90 ? 'Excellent!' : s >= 70 ? 'Great form' : s >= 50 ? 'Almost there' : 'Keep adjusting';
+}
+
+function ScoreRing({ score }: { score: number }) {
+  const size = 66, stroke = 7, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const off = c - (Math.max(0, Math.min(100, score)) / 100) * c;
+  const col = scoreHex(score);
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none" stroke={col} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={off}
+          style={{ transition: 'stroke-dashoffset 0.25s ease, stroke 0.25s ease' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-lg font-bold text-white tabular-nums">{score}%</span>
+      </div>
+    </div>
+  );
+}
 
 interface WebcamPracticeProps {
   targetLandmarks: Landmark[];
@@ -176,14 +204,6 @@ export function WebcamPractice({ targetLandmarks, onScore, className = '' }: Web
     };
   }, [stopCamera]);
 
-  const scoreColor = result
-    ? result.score >= 90 ? 'text-green-500' : result.score >= 70 ? 'text-yellow-500' : result.score >= 50 ? 'text-orange-500' : 'text-red-500'
-    : '';
-
-  const scoreBg = result
-    ? result.score >= 90 ? 'bg-green-50 border-green-200' : result.score >= 70 ? 'bg-yellow-50 border-yellow-200' : result.score >= 50 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200'
-    : '';
-
   return (
     <div className={`flex flex-col ${className}`}>
       <div className="relative bg-[#0a0a0a] rounded-xl overflow-hidden aspect-[4/3] border border-white/10">
@@ -234,34 +254,49 @@ export function WebcamPractice({ targetLandmarks, onScore, className = '' }: Web
           </div>
         )}
 
-        {isActive && result && (
-          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur rounded-xl px-4 py-2 shadow-lg">
-            <div className={`text-3xl font-bold ${scoreColor}`}>{result.score}%</div>
+        {/* Always-visible live score overlay while the camera is on */}
+        {isActive && (
+          <div className="absolute inset-x-0 bottom-0 px-4 py-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent">
+            {result ? (
+              <div className="flex items-center gap-3">
+                <ScoreRing score={result.score} />
+                <div className="leading-tight">
+                  <div className="text-white font-semibold">{statusLabel(result.score)}</div>
+                  <div className="text-xs text-gray-300">match accuracy</div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-white">
+                <Hand className="w-5 h-5 text-[#1dda63] animate-pulse" />
+                <span className="text-sm font-medium">Show your hand to the camera…</span>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {isActive && (
-        <div className="mt-3 space-y-2">
-          {result && (
-            <div className={`p-3 rounded-lg border ${scoreBg}`}>
-              {/* scoreBg is always a light *-50 background (no dark variant),
-                  so force dark text — otherwise it inherits the page's
-                  near-white text in dark mode and becomes invisible. */}
+        <div className="mt-3 space-y-3">
+          {result && result.hints.length > 0 && (
+            <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 space-y-1">
               {result.hints.map((hint, i) => (
-                <p key={i} className="text-sm text-gray-800">{hint}</p>
+                <p key={i} className="text-sm text-gray-200 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: scoreHex(result.score) }} />
+                  {hint}
+                </p>
               ))}
             </div>
           )}
 
           {result && (
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-5 gap-2">
               {Object.entries(result.fingerScores).map(([finger, score]) => (
-                <div key={finger} className="text-center p-1.5 bg-gray-50 dark:bg-white/[0.06] rounded-lg">
-                  <div className="text-xs text-gray-500 capitalize">{finger}</div>
-                  <div className={`text-sm font-bold ${
-                    score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600'
-                  }`}>{score}%</div>
+                <div key={finger} className="rounded-xl bg-white/[0.04] border border-white/10 p-2 text-center">
+                  <div className="text-[11px] text-gray-400 capitalize mb-0.5">{finger}</div>
+                  <div className="text-sm font-bold tabular-nums" style={{ color: scoreHex(score) }}>{score}%</div>
+                  <div className="mt-1.5 h-1 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${score}%`, backgroundColor: scoreHex(score) }} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -269,9 +304,9 @@ export function WebcamPractice({ targetLandmarks, onScore, className = '' }: Web
 
           <button
             onClick={stopCamera}
-            className="w-full py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            className="w-full py-2.5 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-xl transition-colors"
           >
-            Stop Camera
+            Stop camera
           </button>
         </div>
       )}
