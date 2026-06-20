@@ -1,140 +1,147 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useProgressStore } from '@/lib/storage/progress-store';
-import { achievements, getAchievement } from '@/lib/gamification/achievements';
-import { Trophy, Flame, Zap, Star, Target, Lock } from 'lucide-react';
+import { achievements } from '@/lib/gamification/achievements';
+import {
+  Trophy, Flame, Zap, Target, Lock, BookOpen, Camera, Languages, ArrowRight,
+} from 'lucide-react';
 
-export default function ProgressPage() {
+const quickActions = [
+  { href: '/learn', icon: BookOpen, title: 'Continue a course', desc: 'Pick up where you left off', color: '#1dda63' },
+  { href: '/practice', icon: Camera, title: 'Practice with webcam', desc: 'Get instant feedback on your signs', color: '#1dda63' },
+  { href: '/translate', icon: Languages, title: 'Translate text to sign', desc: 'Type anything and watch it signed', color: '#1dda63' },
+];
+
+export default function DashboardPage() {
   const progress = useProgressStore();
+  const [today, setToday] = useState('');
+
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }));
+  }, []);
+
   const signsCount = Object.keys(progress.signsLearned).length;
   const masteredCount = Object.values(progress.signsLearned).filter(s => s.mastered).length;
-  const totalAttempts = Object.values(progress.signsLearned).reduce((sum, s) => sum + s.attempts, 0);
   const avgScore = signsCount > 0
     ? Math.round(Object.values(progress.signsLearned).reduce((sum, s) => sum + s.bestScore, 0) / signsCount)
     : 0;
+  const isNew = signsCount === 0 && progress.lessonsCompleted.length === 0;
 
   const xpProgress = progress.xpProgress();
   const xpForNext = progress.xpForNextLevel();
+  const unlockedCount = progress.achievements.length;
+
+  const stats = [
+    { icon: Flame, label: 'Day streak', value: progress.streakDays, sub: progress.streakDays === 1 ? 'day' : 'days' },
+    { icon: Zap, label: 'Signs learned', value: signsCount, sub: `${masteredCount} mastered` },
+    { icon: Target, label: 'Average score', value: `${avgScore}%`, sub: 'your best signs' },
+    { icon: Trophy, label: 'Achievements', value: unlockedCount, sub: `of ${achievements.length}` },
+  ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="text-3xl font-bold mb-8">Your Progress</h1>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      {/* Greeting */}
+      <div className="mb-8">
+        <p className="text-sm text-[#1dda63] font-medium">{today || ' '}</p>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-1">
+          {isNew ? 'Welcome to SignBridge 👋' : 'Welcome back 👋'}
+        </h1>
+        <p className="text-gray-400 mt-2">
+          {isNew
+            ? 'Let’s learn your first signs. Pick anything below to get started.'
+            : 'Here’s your progress — keep the streak going.'}
+        </p>
+      </div>
 
-      {/* Level & XP */}
-      <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 sm:p-8 text-white mb-8">
-        <div className="flex items-center justify-between mb-4">
+      {/* Level + XP */}
+      <div className="relative overflow-hidden rounded-3xl border border-[#1dda63]/25 bg-gradient-to-br from-[#0e2417] to-[#0a0a0a] p-6 sm:p-8 mb-8">
+        <div className="pointer-events-none absolute -top-16 -right-10 w-64 h-64 bg-[#1dda63]/20 blur-[90px] rounded-full" />
+        <div className="relative flex items-end justify-between mb-5">
           <div>
-            <p className="text-[#1dda63] text-sm font-medium">Current Level</p>
-            <p className="text-4xl font-bold">{progress.level}</p>
+            <p className="text-sm text-[#1dda63] font-medium">Level</p>
+            <p className="text-5xl font-bold leading-none mt-1">{progress.level}</p>
           </div>
           <div className="text-right">
-            <p className="text-[#1dda63] text-sm font-medium">Total XP</p>
-            <p className="text-4xl font-bold">{progress.xp.toLocaleString()}</p>
+            <p className="text-sm text-[#1dda63] font-medium">Total XP</p>
+            <p className="text-3xl font-bold leading-none mt-1">{progress.xp.toLocaleString()}</p>
           </div>
         </div>
-        <div className="mt-4">
-          <div className="flex justify-between text-sm text-[#1dda63] mb-2">
-            <span>Level {progress.level}</span>
-            <span>Level {progress.level + 1}</span>
+        <div className="relative">
+          <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-[#1dda63] rounded-full transition-all duration-500" style={{ width: `${xpProgress}%` }} />
           </div>
-          <div className="h-3 bg-indigo-900/40 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white/90 rounded-full transition-all duration-500"
-              style={{ width: `${xpProgress}%` }}
-            />
-          </div>
-          <p className="text-xs text-[#1dda63] mt-2">{xpForNext - progress.xp} XP to next level</p>
+          <p className="text-xs text-gray-400 mt-2">
+            {Math.max(0, xpForNext - progress.xp)} XP to level {progress.level + 1}
+          </p>
         </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 p-5">
-          <div className="flex items-center gap-2 text-orange-500 mb-2">
-            <Flame className="w-5 h-5" />
-            <span className="text-sm font-medium">Streak</span>
-          </div>
-          <p className="text-3xl font-bold">{progress.streakDays}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">days</p>
-        </div>
-
-        <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 p-5">
-          <div className="flex items-center gap-2 text-indigo-500 mb-2">
-            <Zap className="w-5 h-5" />
-            <span className="text-sm font-medium">Signs Learned</span>
-          </div>
-          <p className="text-3xl font-bold">{signsCount}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{masteredCount} mastered</p>
-        </div>
-
-        <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 p-5">
-          <div className="flex items-center gap-2 text-green-500 mb-2">
-            <Target className="w-5 h-5" />
-            <span className="text-sm font-medium">Avg Score</span>
-          </div>
-          <p className="text-3xl font-bold">{avgScore}%</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">best scores</p>
-        </div>
-
-        <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 p-5">
-          <div className="flex items-center gap-2 text-purple-500 mb-2">
-            <Star className="w-5 h-5" />
-            <span className="text-sm font-medium">Total Practice</span>
-          </div>
-          <p className="text-3xl font-bold">{totalAttempts}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">attempts</p>
-        </div>
+      {/* Quick actions */}
+      <h2 className="text-lg font-semibold mb-3">{isNew ? 'Start here' : 'Jump back in'}</h2>
+      <div className="grid sm:grid-cols-3 gap-4 mb-10">
+        {quickActions.map(({ href, icon: Icon, title, desc }) => (
+          <Link
+            key={href}
+            href={href}
+            className="group p-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#1dda63]/40 hover:bg-white/[0.05] transition-all"
+          >
+            <div className="w-11 h-11 rounded-xl bg-[#1dda63]/12 text-[#1dda63] flex items-center justify-center mb-3">
+              <Icon className="w-5 h-5" />
+            </div>
+            <h3 className="font-semibold group-hover:text-[#1dda63] transition-colors">{title}</h3>
+            <p className="text-sm text-gray-400 mt-1">{desc}</p>
+            <div className="mt-3 inline-flex items-center gap-1 text-sm text-gray-500 group-hover:text-[#1dda63] transition-colors">
+              Go <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+        ))}
       </div>
 
-      {/* Lessons & Courses */}
-      <div className="grid md:grid-cols-2 gap-4 mb-8">
-        <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 p-5">
-          <h3 className="font-semibold mb-2">Lessons Completed</h3>
-          <p className="text-3xl font-bold text-[#1dda63]">{progress.lessonsCompleted.length}</p>
-          {progress.lessonsCompleted.length === 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Start a course to track your progress</p>
-          )}
-        </div>
-        <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 p-5">
-          <h3 className="font-semibold mb-2">Courses Completed</h3>
-          <p className="text-3xl font-bold text-purple-600">{progress.coursesCompleted.length}</p>
-          {progress.coursesCompleted.length === 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Complete all lessons in a course to finish it</p>
-          )}
-        </div>
+      {/* Stats */}
+      <h2 className="text-lg font-semibold mb-3">Your stats</h2>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        {stats.map(({ icon: Icon, label, value, sub }) => (
+          <div key={label} className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
+            <div className="flex items-center gap-2 text-[#1dda63] mb-3">
+              <Icon className="w-5 h-5" />
+              <span className="text-sm font-medium text-gray-300">{label}</span>
+            </div>
+            <p className="text-3xl font-bold">{value}</p>
+            <p className="text-xs text-gray-500 mt-1">{sub}</p>
+          </div>
+        ))}
       </div>
 
       {/* Achievements */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <Trophy className="w-6 h-6 text-yellow-500" />
-          Achievements
-        </h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {achievements.map(achievement => {
-            const unlocked = progress.achievements.includes(achievement.id);
-            return (
-              <div
-                key={achievement.id}
-                className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
-                  unlocked
-                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700/50'
-                    : 'bg-gray-50 dark:bg-white/[0.05] border-gray-200 dark:border-white/10 opacity-60'
-                }`}
-              >
-                <div className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl text-2xl ${
-                  unlocked ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-gray-200 dark:bg-gray-700'
-                }`}>
-                  {unlocked ? achievement.icon : <Lock className="w-5 h-5 text-gray-400" />}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-sm">{achievement.title}</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-300 mt-0.5">{achievement.description}</p>
-                </div>
+      <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+        <Trophy className="w-5 h-5 text-[#1dda63]" /> Achievements
+      </h2>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {achievements.map((achievement) => {
+          const unlocked = progress.achievements.includes(achievement.id);
+          return (
+            <div
+              key={achievement.id}
+              className={`flex items-start gap-4 p-4 rounded-2xl border transition-colors ${
+                unlocked
+                  ? 'bg-[#1dda63]/[0.08] border-[#1dda63]/30'
+                  : 'bg-white/[0.02] border-white/10 opacity-60'
+              }`}
+            >
+              <div className={`shrink-0 w-12 h-12 flex items-center justify-center rounded-xl text-2xl ${
+                unlocked ? 'bg-[#1dda63]/15' : 'bg-white/[0.06]'
+              }`}>
+                {unlocked ? achievement.icon : <Lock className="w-5 h-5 text-gray-500" />}
               </div>
-            );
-          })}
-        </div>
+              <div>
+                <h3 className="font-semibold text-sm">{achievement.title}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{achievement.description}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

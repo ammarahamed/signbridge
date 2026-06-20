@@ -167,6 +167,7 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     const state = get();
     const currentLevelXP = xpForLevel(state.level);
     const nextLevelXP = xpForLevel(state.level + 1);
-    return ((state.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+    const pct = ((state.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+    return Math.max(0, Math.min(100, pct));
   },
 }));
