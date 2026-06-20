@@ -46,12 +46,19 @@ export default function ConversationPage() {
   const [speaking, setSpeaking] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
     setSupported(getRecognitionCtor() !== null);
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+    // Voices load asynchronously — grab them now and on the change event.
+    const loadVoices = () => { if (synth) voicesRef.current = synth.getVoices(); };
+    loadVoices();
+    synth?.addEventListener?.('voiceschanged', loadVoices);
     return () => {
       recognitionRef.current?.stop();
-      if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
+      synth?.removeEventListener?.('voiceschanged', loadVoices);
+      synth?.cancel();
     };
   }, []);
 
@@ -102,6 +109,18 @@ export default function ConversationPage() {
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = 'en-US';
+    // Prefer a natural-sounding voice over the robotic browser default.
+    const voices = voicesRef.current.length ? voicesRef.current : window.speechSynthesis.getVoices();
+    const voice =
+      voices.find(v => v.name === 'Google US English') ||
+      voices.find(v => v.lang === 'en-US' && /google|natural|premium|enhanced|neural|aria|jenny|samantha/i.test(v.name)) ||
+      voices.find(v => v.name === 'Samantha') ||
+      voices.find(v => v.lang === 'en-US' && !v.localService) ||
+      voices.find(v => v.lang?.startsWith('en')) ||
+      null;
+    if (voice) utt.voice = voice;
+    utt.rate = 1;
+    utt.pitch = 1;
     utt.onstart = () => setSpeaking(true);
     utt.onend = () => setSpeaking(false);
     window.speechSynthesis.speak(utt);
