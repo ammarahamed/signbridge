@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { CocoonBar } from '@/components/layout/CocoonBar';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { DashboardShell } from '@/components/layout/DashboardShell';
 import { useProgressStore } from '@/lib/storage/progress-store';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const hydrate = useProgressStore(s => s.hydrate);
+  const pathname = usePathname();
+  // Homepage is the public landing; every tool page runs inside the dashboard shell.
+  const isLanding = pathname === '/';
 
   useEffect(() => {
     hydrate();
@@ -21,9 +26,15 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <div className="absolute top-1/3 -right-24 w-[30rem] h-[30rem] bg-[#1dda63]/[0.045] rounded-full blur-[130px]" />
       </div>
       <CocoonBar />
-      <Navbar />
-      <main className="relative flex-1">{children}</main>
-      <Footer />
+      {isLanding ? (
+        <>
+          <Navbar />
+          <main className="relative flex-1">{children}</main>
+          <Footer />
+        </>
+      ) : (
+        <DashboardShell>{children}</DashboardShell>
+      )}
     </>
   );
 }
