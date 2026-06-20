@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, BookOpen } from 'lucide-react';
 import { signLanguages, getCoursesForLanguage } from '@/lib/signs/languages';
 import { useProgressStore } from '@/lib/storage/progress-store';
 
@@ -28,9 +28,12 @@ function LearnContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="mb-10">
-        <h1 className="text-3xl sm:text-4xl font-bold">Learn Sign Language</h1>
-        <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">
-          Choose your language and start learning with structured courses.
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#1dda63]/12 text-[#1dda63] mb-4">
+          <BookOpen className="w-6 h-6" />
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Learn sign language</h1>
+        <p className="mt-3 text-lg text-gray-400 max-w-2xl">
+          Choose your language and start learning with structured, bite-sized courses.
         </p>
       </div>
 

@@ -56,12 +56,12 @@ export default function PracticePage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Hand className="w-8 h-8 text-[#1dda63]" />
-            Practice Mode
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">
-            Practice signs with your webcam and get real-time feedback
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#1dda63]/12 text-[#1dda63] mb-4">
+            <Hand className="w-6 h-6" />
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Practice mode</h1>
+          <p className="text-gray-400 mt-3 max-w-2xl">
+            Practice signs with your webcam and get real-time feedback.
           </p>
         </div>
 

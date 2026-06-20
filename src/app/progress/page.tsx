@@ -5,8 +5,29 @@ import Link from 'next/link';
 import { useProgressStore } from '@/lib/storage/progress-store';
 import { achievements } from '@/lib/gamification/achievements';
 import {
-  Trophy, Flame, Zap, Target, Lock, BookOpen, Camera, Languages, ArrowRight,
+  Trophy, Flame, Zap, Target, Lock, BookOpen, Camera, Languages, ArrowRight, PlayCircle,
 } from 'lucide-react';
+import { getCoursesForLanguage } from '@/lib/signs/languages';
+
+function Ring({ pct, center, sub }: { pct: number; center: string; sub: string }) {
+  const size = 128, stroke = 11, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const off = c - (Math.max(0, Math.min(100, pct)) / 100) * c;
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#1dda63" strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset 0.7s ease' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold">{center}</span>
+        <span className="text-[11px] text-gray-400">{sub}</span>
+      </div>
+    </div>
+  );
+}
 
 const quickActions = [
   { href: '/learn', icon: BookOpen, title: 'Continue a course', desc: 'Pick up where you left off', color: '#1dda63' },
@@ -32,6 +53,16 @@ export default function DashboardPage() {
   const xpProgress = progress.xpProgress();
   const xpForNext = progress.xpForNextLevel();
   const unlockedCount = progress.achievements.length;
+
+  const lang = progress.preferredLanguage || 'asl';
+  const lessons = getCoursesForLanguage(lang).flatMap(c =>
+    c.lessons.map(l => ({ id: l.id, title: l.title, courseId: c.id, courseTitle: c.title }))
+  );
+  const doneLessons = new Set(progress.lessonsCompleted);
+  const totalLessons = lessons.length;
+  const doneCount = lessons.filter(l => doneLessons.has(l.id)).length;
+  const coursePct = totalLessons ? Math.round((doneCount / totalLessons) * 100) : 0;
+  const upNext = lessons.filter(l => !doneLessons.has(l.id)).slice(0, 4);
 
   const stats = [
     { icon: Flame, label: 'Day streak', value: progress.streakDays, sub: progress.streakDays === 1 ? 'day' : 'days' },
@@ -75,6 +106,47 @@ export default function DashboardPage() {
           <p className="text-xs text-gray-400 mt-2">
             {Math.max(0, xpForNext - progress.xp)} XP to level {progress.level + 1}
           </p>
+        </div>
+      </div>
+
+      {/* Continue learning + ring */}
+      <div className="grid lg:grid-cols-[1.6fr_1fr] gap-4 mb-10">
+        <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold">Continue learning</h2>
+            <Link href="/learn" className="text-sm text-[#1dda63] hover:underline">All courses</Link>
+          </div>
+          <div className="flex flex-col gap-2">
+            {upNext.length === 0 ? (
+              <p className="text-sm text-gray-400 py-8 text-center">
+                🎉 You’ve finished every lesson! Try Practice or the Dictionary next.
+              </p>
+            ) : (
+              upNext.map(l => (
+                <Link
+                  key={l.id}
+                  href={`/learn/${lang}/${l.courseId}/${l.id}`}
+                  className="group flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-[#1dda63]/30 transition-all"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-[#1dda63]/12 text-[#1dda63] flex items-center justify-center shrink-0">
+                    <PlayCircle className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{l.title}</p>
+                    <p className="text-xs text-gray-500 truncate">{l.courseTitle}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-[#1dda63] group-hover:translate-x-1 transition-all shrink-0" />
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="rounded-3xl bg-white/[0.03] border border-white/10 p-5 flex flex-col">
+          <h2 className="font-semibold mb-2">Course progress</h2>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <Ring pct={coursePct} center={`${coursePct}%`} sub="complete" />
+            <p className="text-sm text-gray-400 mt-3">{doneCount} of {totalLessons} lessons done</p>
+          </div>
         </div>
       </div>
 
