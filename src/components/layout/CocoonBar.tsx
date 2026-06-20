@@ -13,7 +13,7 @@ const links = [
 
 export function CocoonBar() {
   return (
-    <div className="w-full bg-black/60 backdrop-blur border-b border-white/[0.07] text-white">
+    <div className="sticky top-0 z-40 w-full bg-[#070707]/85 backdrop-blur border-b border-white/[0.07] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-11 flex items-center justify-between">
         <a href={COCOON} className="font-bold text-lg tracking-tight text-white">
           cocoon<span className="text-[#1dda63]">.</span>
