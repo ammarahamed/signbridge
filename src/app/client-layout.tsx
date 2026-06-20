@@ -14,8 +14,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {/* App-wide ambient green glow (subtle; pages can layer their own on top) */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-40 left-1/4 w-[40rem] h-[40rem] bg-[#1dda63]/[0.06] rounded-full blur-[140px]" />
+        <div className="absolute top-1/3 -right-24 w-[30rem] h-[30rem] bg-[#1dda63]/[0.045] rounded-full blur-[130px]" />
+      </div>
       <Navbar />
-      <main className="flex-1">{children}</main>
+      <main className="relative flex-1">{children}</main>
       <Footer />
     </>
   );
