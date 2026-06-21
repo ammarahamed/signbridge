@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -39,7 +39,7 @@ export default function LessonClient() {
   const [step, setStep] = useState<StepType>('intro');
   const [bestScore, setBestScore] = useState(0);
   const [passed, setPassed] = useState(false);
-  const passedRef = useRef(false);
+  const [capture, setCapture] = useState<{ image: string; score: number } | null>(null);
   const [quizAnswer, setQuizAnswer] = useState<string | null>(null);
   const [quizCorrect, setQuizCorrect] = useState<boolean | null>(null);
 
@@ -57,35 +57,25 @@ export default function LessonClient() {
   const totalSteps = signs.length;
 
   const handleScore = useCallback((result: PoseComparisonResult) => {
-    if (result.score > bestScore) {
-      setBestScore(result.score);
-    }
-    if (currentSign && result.score >= 60 && !passedRef.current) {
-      passedRef.current = true;
-      setPassed(true);
-      recordPractice(currentSign.id, result.score);
-      setTimeout(() => {
-        if (currentSignIndex < signs.length - 1) {
-          setCurrentSignIndex(i => i + 1);
-          setStep('watch');
-          setBestScore(0);
-          setPassed(false);
-          passedRef.current = false;
-        } else {
-          completeLesson(lessonId);
-          setStep('complete');
-        }
-      }, 2000);
-    }
-  }, [bestScore, currentSign, recordPractice, currentSignIndex, signs.length, completeLesson, lessonId]);
+    setBestScore(b => Math.max(b, result.score));
+  }, []);
+
+  // Fired once when the learner passes — freeze on their snapshot, don't auto-advance.
+  const handlePass = useCallback((image: string, score: number) => {
+    if (!currentSign) return;
+    setCapture({ image, score });
+    setPassed(true);
+    setBestScore(b => Math.max(b, score));
+    recordPractice(currentSign.id, score);
+  }, [currentSign, recordPractice]);
 
   const nextSign = () => {
+    setCapture(null);
+    setPassed(false);
     if (currentSignIndex < signs.length - 1) {
       setCurrentSignIndex(i => i + 1);
       setStep('watch');
       setBestScore(0);
-      setPassed(false);
-      passedRef.current = false;
     } else {
       setStep('quiz');
     }
@@ -234,17 +224,32 @@ export default function LessonClient() {
               <WebcamPractice
                 targetLandmarks={currentSign.poses[0]?.landmarks || []}
                 onScore={handleScore}
+                onPass={handlePass}
+                passThreshold={50}
               />
             </div>
           </div>
 
-          {passed ? (
-            <div className="text-center p-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-              <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-2" />
-              <p className="text-xl font-bold text-green-600 dark:text-green-400">Passed! {bestScore}%</p>
-              <p className="text-sm text-green-600/70 dark:text-green-400/70 mt-1">
-                {currentSignIndex < signs.length - 1 ? 'Moving to next sign...' : 'Completing lesson...'}
-              </p>
+          {passed && capture ? (
+            <div className="rounded-2xl bg-[#1dda63]/[0.08] border border-[#1dda63]/30 p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <CheckCircle2 className="w-8 h-8 text-[#1dda63] shrink-0" />
+                <div>
+                  <p className="text-lg font-bold text-[#1dda63]">Nice! You signed &ldquo;{currentSign.gloss}&rdquo;</p>
+                  <p className="text-sm text-gray-400">Matched at {capture.score}% — here&apos;s your sign</p>
+                </div>
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={capture.image} alt={`You signing ${currentSign.gloss}`} className="w-full max-w-sm mx-auto rounded-xl border border-white/10" />
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={nextSign}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#072012] rounded-xl font-semibold transition-colors"
+                >
+                  {currentSignIndex < signs.length - 1 ? 'Next sign' : 'Finish lesson'}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ) : bestScore > 0 ? (
             <div className="text-center p-4 bg-gray-50 dark:bg-white/[0.06] rounded-xl">
@@ -252,26 +257,28 @@ export default function LessonClient() {
               <p className={`text-3xl font-bold ${
                 bestScore >= 90 ? 'text-green-500' : bestScore >= 70 ? 'text-yellow-500' : 'text-orange-500'
               }`}>{bestScore}%</p>
-              <p className="text-xs text-gray-400 mt-1">Score 70% or higher to pass</p>
+              <p className="text-xs text-gray-400 mt-1">Score 50% or higher to pass</p>
             </div>
           ) : null}
 
-          <div className="flex justify-between">
-            <button
-              onClick={() => setStep('watch')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded-xl transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Watch Again
-            </button>
-            <button
-              onClick={nextSign}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#0a0a0a] rounded-xl font-medium transition-colors"
-            >
-              {currentSignIndex < signs.length - 1 ? 'Next Sign' : 'Finish'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          {!passed && (
+            <div className="flex justify-between">
+              <button
+                onClick={() => setStep('watch')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded-xl transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Watch Again
+              </button>
+              <button
+                onClick={nextSign}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#0a0a0a] rounded-xl font-medium transition-colors"
+              >
+                {currentSignIndex < signs.length - 1 ? 'Skip' : 'Skip to quiz'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 

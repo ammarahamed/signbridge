@@ -57,7 +57,7 @@ export default function PracticePage() {
 
   const handleScore = (result: PoseComparisonResult) => {
     setLastScore(result);
-    if (currentSign && result.score >= 60) {
+    if (currentSign && result.score >= 50) {
       recordPractice(currentSign.id, result.score);
     }
   };

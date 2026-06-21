@@ -15,7 +15,7 @@ const FINGER_JOINT_WEIGHT = 1.0;
 // Mild leniency to offset webcam noise on honest attempts — but gentle enough
 // that wrong handshapes (which now score low) don't get rescued into a pass:
 //   raw 30 -> 39, 40 -> 50, 60 -> 68, 80 -> 84, 100 -> 100.
-const LENIENCY_EXPONENT = 0.85;
+const LENIENCY_EXPONENT = 0.8;
 function applyLeniency(score: number): number {
   return 100 * Math.pow(Math.max(0, score) / 100, LENIENCY_EXPONENT);
 }
