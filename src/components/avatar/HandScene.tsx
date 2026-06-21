@@ -28,7 +28,7 @@ export function HandScene({ landmarks, autoRotate = false, className = '' }: Han
     typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
   return (
-    <div className={`w-full h-full min-h-[300px] ${className}`} role="img" aria-label="3D hand demonstrating a sign">
+    <div className={`w-full h-full min-h-0 ${className}`} role="img" aria-label="3D hand demonstrating a sign">
       <Canvas
         camera={{ position: [0, 0.5, 2.5], fov: 45 }}
         gl={{ antialias: true }}
