@@ -12,11 +12,10 @@ const FINGER_JOINTS: Record<string, number[]> = {
 const FINGER_TIP_WEIGHT = 2.0;
 const FINGER_JOINT_WEIGHT = 1.0;
 
-// Leniency curve applied to each finger score. Webcam pose estimation is noisy,
-// so raw scores run low and discourage learners. This boosts honest mid-range
-// attempts without making a perfect score trivial:
-//   raw 40 -> 53, 50 -> 62, 60 -> 70, 70 -> 78, 90 -> 93, 100 -> 100.
-const LENIENCY_EXPONENT = 0.7;
+// Mild leniency to offset webcam noise on honest attempts — but gentle enough
+// that wrong handshapes (which now score low) don't get rescued into a pass:
+//   raw 30 -> 39, 40 -> 50, 60 -> 68, 80 -> 84, 100 -> 100.
+const LENIENCY_EXPONENT = 0.85;
 function applyLeniency(score: number): number {
   return 100 * Math.pow(Math.max(0, score) / 100, LENIENCY_EXPONENT);
 }
@@ -77,7 +76,10 @@ function fingerCurlSimilarity(
     const refDir = vectorBetween(refLandmarks[joints[i]], refLandmarks[joints[i + 1]]);
     const userDir = vectorBetween(userLandmarks[joints[i]], userLandmarks[joints[i + 1]]);
     const sim = cosineSimilarity(refDir, userDir);
-    totalSim += (sim + 1) / 2; // map from [-1,1] to [0,1]
+    // A well-aligned finger has cosine ~1; a perpendicular/opposite one should
+    // score near 0 (the old (sim+1)/2 gave a perpendicular finger 0.5, so wrong
+    // handshapes still passed). Clamp negatives to 0 and use the raw cosine.
+    totalSim += Math.max(0, sim);
     count++;
   }
 
