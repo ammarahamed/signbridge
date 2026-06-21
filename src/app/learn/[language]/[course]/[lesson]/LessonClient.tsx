@@ -102,7 +102,7 @@ export default function LessonClient() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Link
@@ -207,16 +207,17 @@ export default function LessonClient() {
             <h2 className="text-xl font-bold">Sign &ldquo;{currentSign.gloss}&rdquo;</h2>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-6">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[190px_minmax(0,1fr)_290px] gap-5 items-start">
+            {/* Reference — compact */}
+            <div className="space-y-3">
               <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                <SignPlayer sign={currentSign} showControls={false} className="h-[280px]" />
-                <div className="p-2 text-center text-xs text-gray-500 border-t border-gray-100 dark:border-white/10">
-                  {currentSign.description}
-                </div>
+                <SignPlayer sign={currentSign} showControls={false} className="h-[180px]" />
               </div>
               <ReferenceImage sign={currentSign} />
+              <p className="text-xs text-gray-500 leading-relaxed px-1">{currentSign.description}</p>
             </div>
+
+            {/* Camera + live scores */}
             <div>
               <WebcamPractice
                 targetLandmarks={currentSign.poses[0]?.landmarks || []}
@@ -225,49 +226,49 @@ export default function LessonClient() {
                 passThreshold={50}
               />
             </div>
+
+            {/* Status / actions */}
+            <div className="space-y-3">
+              {passed ? (
+                <div className="rounded-2xl bg-[#1dda63]/[0.08] border border-[#1dda63]/30 p-5 text-center">
+                  <CheckCircle2 className="w-9 h-9 text-[#1dda63] mx-auto mb-2" />
+                  <p className="text-base font-bold text-[#1dda63]">Nice! You signed &ldquo;{currentSign.gloss}&rdquo; — {bestScore}%</p>
+                  <p className="text-sm text-gray-400 mt-1">Keep going, or move on when you&apos;re ready.</p>
+                  <button
+                    onClick={nextSign}
+                    className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#072012] rounded-xl font-semibold transition-colors"
+                  >
+                    {currentSignIndex < signs.length - 1 ? 'Next sign' : 'Finish lesson'}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {bestScore > 0 && (
+                    <div className="text-center p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+                      <p className="text-xs text-gray-500 mb-1">Best this session</p>
+                      <p className={`text-3xl font-bold ${bestScore >= 70 ? 'text-[#1dda63]' : 'text-orange-400'}`}>{bestScore}%</p>
+                      <p className="text-[11px] text-gray-500 mt-1">Reach 50% to pass</p>
+                    </div>
+                  )}
+                  <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 space-y-2">
+                    <button
+                      onClick={() => setStep('watch')}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-white/[0.06] rounded-xl transition-colors"
+                    >
+                      <ArrowLeft className="w-4 h-4" /> Watch again
+                    </button>
+                    <button
+                      onClick={nextSign}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-xl transition-colors"
+                    >
+                      {currentSignIndex < signs.length - 1 ? 'Skip' : 'Skip to quiz'} <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-
-          {passed ? (
-            <div className="rounded-2xl bg-[#1dda63]/[0.08] border border-[#1dda63]/30 p-5 text-center">
-              <CheckCircle2 className="w-9 h-9 text-[#1dda63] mx-auto mb-2" />
-              <p className="text-lg font-bold text-[#1dda63]">Nice! You signed &ldquo;{currentSign.gloss}&rdquo; — {bestScore}%</p>
-              <p className="text-sm text-gray-400 mt-1">Keep going, or move on when you&apos;re ready.</p>
-              <button
-                onClick={nextSign}
-                className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#072012] rounded-xl font-semibold transition-colors"
-              >
-                {currentSignIndex < signs.length - 1 ? 'Next sign' : 'Finish lesson'}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          ) : bestScore > 0 ? (
-            <div className="text-center p-4 bg-gray-50 dark:bg-white/[0.06] rounded-xl">
-              <p className="text-sm text-gray-500 mb-1">Best score this session</p>
-              <p className={`text-3xl font-bold ${
-                bestScore >= 90 ? 'text-green-500' : bestScore >= 70 ? 'text-yellow-500' : 'text-orange-500'
-              }`}>{bestScore}%</p>
-              <p className="text-xs text-gray-400 mt-1">Score 50% or higher to pass</p>
-            </div>
-          ) : null}
-
-          {!passed && (
-            <div className="flex justify-between">
-              <button
-                onClick={() => setStep('watch')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded-xl transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Watch Again
-              </button>
-              <button
-                onClick={nextSign}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#0a0a0a] rounded-xl font-medium transition-colors"
-              >
-                {currentSignIndex < signs.length - 1 ? 'Skip' : 'Skip to quiz'}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
         </div>
       )}
 

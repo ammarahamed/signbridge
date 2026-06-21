@@ -158,38 +158,37 @@ export default function PracticePage() {
 
       {/* Practice area */}
       {currentSign && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* 3D Reference + Real Image */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold">{currentSign.gloss}</h2>
-              <span className="px-2 py-0.5 bg-gray-100 dark:bg-white/[0.06] rounded text-xs text-gray-500 uppercase">
-                {currentSign.language}
-              </span>
+        <div className="grid grid-cols-1 lg:grid-cols-[190px_minmax(0,1fr)_290px] gap-5 items-start">
+          {/* Reference — compact */}
+          <div className="space-y-3">
+            <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+              <SignPlayer sign={currentSign} showControls={false} className="h-[180px]" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                <SignPlayer sign={currentSign} className="h-[280px]" />
-              </div>
-              <ReferenceImage sign={currentSign} />
-            </div>
-            <div className="p-4 bg-gray-50 dark:bg-white/[0.04] rounded-xl">
-              <p className="text-sm text-gray-600 dark:text-gray-300">{currentSign.description}</p>
-              {currentSign.mnemonic && (
-                <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-2">
-                  Tip: {currentSign.mnemonic}
-                </p>
-              )}
-            </div>
+            <ReferenceImage sign={currentSign} />
           </div>
 
-          {/* Webcam */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold">Your Turn</h2>
+          {/* Camera + live scores */}
+          <div>
             <WebcamPractice
               targetLandmarks={currentSign.poses[0]?.landmarks || []}
               onScore={handleScore}
             />
+          </div>
+
+          {/* Info */}
+          <div>
+            <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-lg font-bold">{currentSign.gloss}</h2>
+                <span className="px-2 py-0.5 bg-white/[0.06] rounded text-[10px] text-gray-400 uppercase">
+                  {currentSign.language}
+                </span>
+              </div>
+              <p className="text-sm text-gray-400 leading-relaxed">{currentSign.description}</p>
+              {currentSign.mnemonic && (
+                <p className="text-sm text-[#1dda63] mt-3">Tip: {currentSign.mnemonic}</p>
+              )}
+            </div>
           </div>
         </div>
       )}
