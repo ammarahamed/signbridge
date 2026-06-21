@@ -12,10 +12,11 @@ const FINGER_JOINTS: Record<string, number[]> = {
 const FINGER_TIP_WEIGHT = 2.0;
 const FINGER_JOINT_WEIGHT = 1.0;
 
-// Mild leniency to offset webcam noise on honest attempts — but gentle enough
-// that wrong handshapes (which now score low) don't get rescued into a pass:
-//   raw 30 -> 39, 40 -> 50, 60 -> 68, 80 -> 84, 100 -> 100.
-const LENIENCY_EXPONENT = 0.8;
+// Encouraging leniency — the reference sign data is approximate, so even a
+// correct sign only reaches ~50-55 raw. This lifts honest attempts into a
+// rewarding range while clearly-wrong handshapes (raw <25) still fail:
+//   raw 25 -> 47, 50 -> 68, 60 -> 75, 80 -> 89, 100 -> 100.
+const LENIENCY_EXPONENT = 0.55;
 function applyLeniency(score: number): number {
   return 100 * Math.pow(Math.max(0, score) / 100, LENIENCY_EXPONENT);
 }

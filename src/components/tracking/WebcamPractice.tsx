@@ -6,10 +6,10 @@ import { Landmark, PoseComparisonResult } from '@/lib/signs/types';
 import { comparePoses } from '@/lib/signs/pose-comparator';
 
 function scoreHex(s: number): string {
-  return s >= 80 ? '#1dda63' : s >= 60 ? '#eab308' : s >= 40 ? '#f97316' : '#ef4444';
+  return s >= 70 ? '#1dda63' : s >= 50 ? '#a3e635' : s >= 35 ? '#f97316' : '#ef4444';
 }
 function statusLabel(s: number): string {
-  return s >= 90 ? 'Excellent!' : s >= 70 ? 'Great form' : s >= 50 ? 'Almost there' : 'Keep adjusting';
+  return s >= 85 ? 'Excellent!' : s >= 65 ? 'Great form!' : s >= 50 ? 'Got it! ✓' : s >= 35 ? 'Almost there' : 'Keep adjusting';
 }
 
 function ScoreRing({ score }: { score: number }) {
