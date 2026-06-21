@@ -16,7 +16,7 @@ const FINGER_JOINT_WEIGHT = 1.0;
 // correct sign only reaches ~50-55 raw. This lifts honest attempts into a
 // rewarding range while clearly-wrong handshapes (raw <25) still fail:
 //   raw 25 -> 47, 50 -> 68, 60 -> 75, 80 -> 89, 100 -> 100.
-const LENIENCY_EXPONENT = 0.55;
+const LENIENCY_EXPONENT = 0.72;
 function applyLeniency(score: number): number {
   return 100 * Math.pow(Math.max(0, score) / 100, LENIENCY_EXPONENT);
 }
@@ -149,9 +149,13 @@ export function comparePoses(
 
     const tipIdx = joints[joints.length - 1];
     const tipDist = euclideanDistance(refNorm[tipIdx], userNorm[tipIdx]);
-    const tipScore = Math.max(0, 1 - tipDist * 0.8);
+    // Penalise wrong fingertip position harder — this is what separates an
+    // open/spread hand from a B (fingers together), or a folded vs out thumb.
+    const tipScore = Math.max(0, 1 - tipDist * 1.4);
 
-    const rawFingerScore = (curlSim * 0.7 + tipScore * 0.3) * 100;
+    // Weight fingertip position as much as curl direction, so similar-curl but
+    // wrong-position shapes (open hand vs B) score lower.
+    const rawFingerScore = (curlSim * 0.5 + tipScore * 0.5) * 100;
     const fingerScore = applyLeniency(rawFingerScore);
     fingerScores[finger] = Math.round(fingerScore);
 
