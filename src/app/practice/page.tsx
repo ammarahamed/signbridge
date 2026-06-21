@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Hand, Shuffle, ChevronDown } from 'lucide-react';
+import { Hand, Shuffle, ChevronDown, Award, Zap, Repeat } from 'lucide-react';
 import { signLanguages } from '@/lib/signs/languages';
 import { getSignsByLanguage, getSignsByCategory } from '@/lib/signs/sign-data';
 import { ReferenceImage } from '@/components/signs/ReferenceImage';
@@ -22,6 +22,7 @@ const WebcamPractice = dynamic(
 export default function PracticePage() {
   const preferredLanguage = useProgressStore(s => s.preferredLanguage);
   const recordPractice = useProgressStore(s => s.recordPractice);
+  const signsLearned = useProgressStore(s => s.signsLearned);
 
   const [language, setLanguage] = useState(preferredLanguage || 'asl');
   const [category, setCategory] = useState('alphabet');
@@ -33,6 +34,19 @@ export default function PracticePage() {
     const allSigns = getSignsByLanguage(language);
     return [...new Set(allSigns.map(s => s.category))];
   }, [language]);
+
+  const stats = useMemo(() => {
+    const catIds = new Set(getSignsByCategory(language, category).map(s => s.id));
+    const learned = Object.entries(signsLearned)
+      .filter(([id]) => catIds.has(id))
+      .map(([, p]) => p);
+    const mastered = learned.filter(p => p.mastered).length;
+    const avg = learned.length
+      ? Math.round(learned.reduce((a, p) => a + p.bestScore, 0) / learned.length)
+      : 0;
+    const reps = learned.reduce((a, p) => a + p.attempts, 0);
+    return { mastered, total: catIds.size, avg, reps };
+  }, [signsLearned, language, category]);
 
   const pickRandomSign = () => {
     if (signs.length === 0) return;
@@ -72,6 +86,25 @@ export default function PracticePage() {
           <Shuffle className="w-4 h-4" />
           Random Sign
         </button>
+      </div>
+
+      {/* Live practice stats */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {[
+          { icon: Award, label: 'Mastered', value: `${stats.mastered}/${stats.total}` },
+          { icon: Zap, label: 'Avg accuracy', value: `${stats.avg}%` },
+          { icon: Repeat, label: 'Total reps', value: `${stats.reps}` },
+        ].map(({ icon: Icon, label, value }) => (
+          <div key={label} className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#1dda63]/12 text-[#1dda63] flex items-center justify-center shrink-0">
+              <Icon className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] uppercase tracking-wide text-gray-400 truncate">{label}</div>
+              <div className="text-xl sm:text-2xl font-bold tabular-nums">{value}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
