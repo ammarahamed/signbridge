@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, CameraOff, Loader2, Hand } from 'lucide-react';
+import { Camera, CameraOff, Loader2, Hand, ChevronDown } from 'lucide-react';
 import { Landmark, PoseComparisonResult } from '@/lib/signs/types';
 import { comparePoses } from '@/lib/signs/pose-comparator';
 
@@ -41,8 +41,6 @@ interface WebcamPracticeProps {
   onPass?: (score: number) => void;
   passThreshold?: number;
   onActiveChange?: (active: boolean) => void;
-  // 'side' shows the score panel beside the video (good for wide layouts).
-  panelLayout?: 'below' | 'side';
   className?: string;
 }
 
@@ -61,10 +59,11 @@ type TasksVision = {
   };
 };
 
-export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold = 60, onActiveChange, panelLayout = 'below', className = '' }: WebcamPracticeProps) {
+export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold = 60, onActiveChange, className = '' }: WebcamPracticeProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const passedRef = useRef(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -250,11 +249,9 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
     onActiveChange?.(isActive);
   }, [isActive, onActiveChange]);
 
-  const side = panelLayout === 'side';
-
   return (
-    <div className={`${side && isActive ? 'flex flex-col lg:flex-row gap-4 items-start' : 'flex flex-col'} ${className}`}>
-      <div className={`relative bg-[#0a0a0a] rounded-xl overflow-hidden aspect-[4/3] border border-white/10 w-full ${side && isActive ? 'lg:max-w-[520px]' : ''}`}>
+    <div className={`flex flex-col ${className}`}>
+      <div className="relative bg-[#0a0a0a] rounded-xl overflow-hidden aspect-[4/3] border border-white/10 w-full max-w-2xl mx-auto">
         <video
           ref={videoRef}
           className="w-full h-full object-cover mirror"
@@ -324,7 +321,17 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
       </div>
 
       {isActive && (
-        <div className={`space-y-3 w-full ${side ? 'lg:flex-1 lg:mt-0' : 'mt-3'}`}>
+        <div className="mt-3 w-full max-w-2xl mx-auto space-y-2">
+          <button
+            onClick={() => setShowDetails(s => !s)}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-sm font-medium text-gray-200 hover:bg-white/[0.06] transition-colors"
+          >
+            <span>Tips &amp; finger scores</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showDetails && (
+            <div className="space-y-3 pt-1">
           {result && result.hints.length > 0 && (
             <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 space-y-1">
               {result.hints.map((hint, i) => (
@@ -347,6 +354,8 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
                   </div>
                 </div>
               ))}
+            </div>
+          )}
             </div>
           )}
 
