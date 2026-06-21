@@ -61,7 +61,6 @@ export function WebcamPractice({ targetLandmarks, onScore, className = '' }: Web
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PoseComparisonResult | null>(null);
-  const [userLandmarks, setUserLandmarks] = useState<Landmark[] | null>(null);
   const handLandmarkerRef = useRef<HandLandmarkerType | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -130,7 +129,6 @@ export function WebcamPractice({ targetLandmarks, onScore, className = '' }: Web
     }
     setIsActive(false);
     setResult(null);
-    setUserLandmarks(null);
   }, []);
 
   const detect = useCallback(() => {
@@ -145,58 +143,81 @@ export function WebcamPractice({ targetLandmarks, onScore, className = '' }: Web
       const detected: Landmark[] = results.landmarks[0].map(
         (lm: { x: number; y: number; z: number }) => [lm.x, lm.y, lm.z] as Landmark
       );
-      setUserLandmarks(detected);
 
+      let scores: Record<string, number> | undefined;
       if (targetLandmarks.length >= 21) {
         const comparison = comparePoses(targetLandmarks, detected);
         setResult(comparison);
         onScore?.(comparison);
+        scores = comparison.fingerScores;
       }
+      drawLandmarks(detected, scores);
     } else {
-      setUserLandmarks(null);
       setResult(null);
+      drawLandmarks(null);
     }
 
-    drawLandmarks();
     animFrameRef.current = requestAnimationFrame(detect);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetLandmarks, onScore]);
 
-  const drawLandmarks = useCallback(() => {
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    if (!canvas || !video || !userLandmarks) return;
+  // Draws the tracked hand, colouring each finger by its accuracy score so the
+  // learner can see which finger is right (green) or off (red) in real time.
+  const drawLandmarks = useCallback(
+    (landmarks: Landmark[] | null, fingerScores?: Record<string, number>) => {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      if (!canvas || !video || !video.videoWidth) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!landmarks) return; // no hand → cleared
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const fingerOf = (i: number): string | null =>
+        i >= 1 && i <= 4 ? 'thumb'
+        : i >= 5 && i <= 8 ? 'index'
+        : i >= 9 && i <= 12 ? 'middle'
+        : i >= 13 && i <= 16 ? 'ring'
+        : i >= 17 && i <= 20 ? 'pinky'
+        : null;
 
-    const connections: [number, number][] = [
-      [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
-      [0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],
-      [0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17],
-    ];
+      const colorFor = (i: number): string => {
+        const f = fingerOf(i);
+        if (f && fingerScores && fingerScores[f] != null) return scoreHex(fingerScores[f]);
+        return '#1dda63'; // neutral brand green before a sign is being scored
+      };
 
-    ctx.strokeStyle = '#6366f1';
-    ctx.lineWidth = 3;
-    for (const [a, b] of connections) {
-      if (a >= userLandmarks.length || b >= userLandmarks.length) continue;
-      ctx.beginPath();
-      ctx.moveTo(userLandmarks[a][0] * canvas.width, userLandmarks[a][1] * canvas.height);
-      ctx.lineTo(userLandmarks[b][0] * canvas.width, userLandmarks[b][1] * canvas.height);
-      ctx.stroke();
-    }
+      const connections: [number, number][] = [
+        [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+        [0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],
+        [0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17],
+      ];
 
-    for (let i = 0; i < userLandmarks.length; i++) {
-      const [x, y] = userLandmarks[i];
-      ctx.fillStyle = [4, 8, 12, 16, 20].includes(i) ? '#e76f51' : '#f4a261';
-      ctx.beginPath();
-      ctx.arc(x * canvas.width, y * canvas.height, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }, [userLandmarks]);
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      for (const [a, b] of connections) {
+        if (a >= landmarks.length || b >= landmarks.length) continue;
+        ctx.strokeStyle = colorFor(b || a); // colour by the further joint's finger
+        ctx.beginPath();
+        ctx.moveTo(landmarks[a][0] * canvas.width, landmarks[a][1] * canvas.height);
+        ctx.lineTo(landmarks[b][0] * canvas.width, landmarks[b][1] * canvas.height);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < landmarks.length; i++) {
+        const [x, y] = landmarks[i];
+        const isTip = i === 4 || i === 8 || i === 12 || i === 16 || i === 20;
+        ctx.fillStyle = i === 0 ? '#ffffff' : colorFor(i);
+        ctx.beginPath();
+        ctx.arc(x * canvas.width, y * canvas.height, isTip ? 7 : 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     return () => {
