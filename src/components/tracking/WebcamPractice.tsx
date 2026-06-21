@@ -215,6 +215,29 @@ export function WebcamPractice({ targetLandmarks, onScore, className = '' }: Web
         ctx.arc(x * canvas.width, y * canvas.height, isTip ? 7 : 5, 0, Math.PI * 2);
         ctx.fill();
       }
+
+      // Finger labels above each fingertip. The canvas is CSS-mirrored, so we
+      // flip the text horizontally to keep it readable.
+      ctx.font = '600 15px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 4;
+      for (const tip of [4, 8, 12, 16, 20]) {
+        if (tip >= landmarks.length) continue;
+        const f = fingerOf(tip);
+        if (!f) continue;
+        const score = fingerScores?.[f];
+        const label = f.charAt(0).toUpperCase() + f.slice(1) + (score != null ? ` ${score}%` : '');
+        const x = landmarks[tip][0] * canvas.width;
+        const y = landmarks[tip][1] * canvas.height;
+        ctx.save();
+        ctx.translate(x, y - 18);
+        ctx.scale(-1, 1); // undo the mirror so text reads correctly
+        ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+        ctx.strokeText(label, 0, 0);
+        ctx.fillStyle = colorFor(tip);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
     },
     []
   );
