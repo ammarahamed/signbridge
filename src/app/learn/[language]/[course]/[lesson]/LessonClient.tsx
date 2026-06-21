@@ -39,6 +39,7 @@ export default function LessonClient() {
   const [step, setStep] = useState<StepType>('intro');
   const [bestScore, setBestScore] = useState(0);
   const [passed, setPassed] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
   const [quizAnswer, setQuizAnswer] = useState<string | null>(null);
   const [quizCorrect, setQuizCorrect] = useState<boolean | null>(null);
 
@@ -69,6 +70,7 @@ export default function LessonClient() {
 
   const nextSign = () => {
     setPassed(false);
+    setCameraActive(false);
     if (currentSignIndex < signs.length - 1) {
       setCurrentSignIndex(i => i + 1);
       setStep('watch');
@@ -207,22 +209,36 @@ export default function LessonClient() {
             <h2 className="text-xl font-bold">Sign &ldquo;{currentSign.gloss}&rdquo;</h2>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                <SignPlayer sign={currentSign} showControls={false} className="h-[280px]" />
-                <div className="p-2 text-center text-xs text-gray-500 border-t border-gray-100 dark:border-white/10">
+          <div className={cameraActive ? 'space-y-4' : 'grid lg:grid-cols-2 gap-6'}>
+            {/* Reference — prominent while studying, a compact strip once the camera is on */}
+            <div className={cameraActive ? 'flex items-stretch gap-3' : 'grid grid-cols-2 gap-4'}>
+              <div className={`bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden ${cameraActive ? 'w-28 shrink-0' : ''}`}>
+                <SignPlayer sign={currentSign} showControls={false} className={cameraActive ? 'h-28' : 'h-[280px]'} />
+                {!cameraActive && (
+                  <div className="p-2 text-center text-xs text-gray-500 border-t border-gray-100 dark:border-white/10">
+                    {currentSign.description}
+                  </div>
+                )}
+              </div>
+              <div className={cameraActive ? 'w-28 shrink-0' : ''}>
+                <ReferenceImage sign={currentSign} />
+              </div>
+              {cameraActive && (
+                <div className="flex-1 flex items-center text-sm text-gray-400 px-1">
                   {currentSign.description}
                 </div>
-              </div>
-              <ReferenceImage sign={currentSign} />
+              )}
             </div>
+
+            {/* Webcam — kept at a stable position so it never remounts when the layout changes */}
             <div>
               <WebcamPractice
                 targetLandmarks={currentSign.poses[0]?.landmarks || []}
                 onScore={handleScore}
                 onPass={handlePass}
                 passThreshold={50}
+                onActiveChange={setCameraActive}
+                panelLayout="side"
               />
             </div>
           </div>

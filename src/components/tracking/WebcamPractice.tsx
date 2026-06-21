@@ -40,6 +40,9 @@ interface WebcamPracticeProps {
   // running — we never freeze it.
   onPass?: (score: number) => void;
   passThreshold?: number;
+  onActiveChange?: (active: boolean) => void;
+  // 'side' shows the score panel beside the video (good for wide layouts).
+  panelLayout?: 'below' | 'side';
   className?: string;
 }
 
@@ -58,7 +61,7 @@ type TasksVision = {
   };
 };
 
-export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold = 60, className = '' }: WebcamPracticeProps) {
+export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold = 60, onActiveChange, panelLayout = 'below', className = '' }: WebcamPracticeProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const passedRef = useRef(false);
@@ -243,9 +246,15 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
     };
   }, [stopCamera]);
 
+  useEffect(() => {
+    onActiveChange?.(isActive);
+  }, [isActive, onActiveChange]);
+
+  const side = panelLayout === 'side';
+
   return (
-    <div className={`flex flex-col ${className}`}>
-      <div className="relative bg-[#0a0a0a] rounded-xl overflow-hidden aspect-[4/3] border border-white/10">
+    <div className={`${side && isActive ? 'flex flex-col lg:flex-row gap-4 items-start' : 'flex flex-col'} ${className}`}>
+      <div className={`relative bg-[#0a0a0a] rounded-xl overflow-hidden aspect-[4/3] border border-white/10 w-full ${side && isActive ? 'lg:max-w-[520px]' : ''}`}>
         <video
           ref={videoRef}
           className="w-full h-full object-cover mirror"
@@ -315,7 +324,7 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
       </div>
 
       {isActive && (
-        <div className="mt-3 space-y-3">
+        <div className={`space-y-3 w-full ${side ? 'lg:flex-1 lg:mt-0' : 'mt-3'}`}>
           {result && result.hints.length > 0 && (
             <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 space-y-1">
               {result.hints.map((hint, i) => (
