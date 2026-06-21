@@ -11,6 +11,10 @@ import { ReferenceImage } from '@/components/signs/ReferenceImage';
 import { useProgressStore } from '@/lib/storage/progress-store';
 import { PoseComparisonResult } from '@/lib/signs/types';
 
+function scoreColor(s: number): string {
+  return s >= 70 ? '#1dda63' : s >= 50 ? '#a3e635' : s >= 35 ? '#f97316' : '#ef4444';
+}
+
 const SignPlayer = dynamic(
   () => import('@/components/avatar/SignPlayer').then(m => ({ default: m.SignPlayer })),
   { ssr: false, loading: () => <div className="w-full h-[300px] bg-gray-100 dark:bg-white/[0.06] rounded-xl animate-pulse" /> }
@@ -39,6 +43,7 @@ export default function LessonClient() {
   const [step, setStep] = useState<StepType>('intro');
   const [bestScore, setBestScore] = useState(0);
   const [passed, setPassed] = useState(false);
+  const [liveResult, setLiveResult] = useState<PoseComparisonResult | null>(null);
   const [quizAnswer, setQuizAnswer] = useState<string | null>(null);
   const [quizCorrect, setQuizCorrect] = useState<boolean | null>(null);
 
@@ -57,6 +62,7 @@ export default function LessonClient() {
 
   const handleScore = useCallback((result: PoseComparisonResult) => {
     setBestScore(b => Math.max(b, result.score));
+    setLiveResult(result);
   }, []);
 
   // Fired once when the learner passes — show a card, don't auto-advance.
@@ -69,6 +75,7 @@ export default function LessonClient() {
 
   const nextSign = () => {
     setPassed(false);
+    setLiveResult(null);
     if (currentSignIndex < signs.length - 1) {
       setCurrentSignIndex(i => i + 1);
       setStep('watch');
@@ -207,66 +214,94 @@ export default function LessonClient() {
             <h2 className="text-xl font-bold">Sign &ldquo;{currentSign.gloss}&rdquo;</h2>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[190px_minmax(0,1fr)_290px] gap-5 items-start">
-            {/* Reference — compact */}
+          <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)_320px] gap-5 items-start">
+            {/* Reference — 3D hand + image (bigger so the hand is usable) */}
             <div className="space-y-3">
               <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                <SignPlayer sign={currentSign} showControls={false} className="h-[180px]" />
+                <SignPlayer sign={currentSign} showControls={false} className="h-[220px]" />
               </div>
               <ReferenceImage sign={currentSign} />
               <p className="text-xs text-gray-500 leading-relaxed px-1">{currentSign.description}</p>
             </div>
 
-            {/* Camera + live scores */}
+            {/* Camera (scores rendered in the right column) */}
             <div>
               <WebcamPractice
                 targetLandmarks={currentSign.poses[0]?.landmarks || []}
                 onScore={handleScore}
                 onPass={handlePass}
                 passThreshold={50}
+                hideScores
               />
             </div>
 
-            {/* Status / actions */}
+            {/* Right: status + always-visible finger scores */}
             <div className="space-y-3">
               {passed ? (
                 <div className="rounded-2xl bg-[#1dda63]/[0.08] border border-[#1dda63]/30 p-5 text-center">
                   <CheckCircle2 className="w-9 h-9 text-[#1dda63] mx-auto mb-2" />
                   <p className="text-base font-bold text-[#1dda63]">Nice! You signed &ldquo;{currentSign.gloss}&rdquo; — {bestScore}%</p>
-                  <p className="text-sm text-gray-400 mt-1">Keep going, or move on when you&apos;re ready.</p>
                   <button
                     onClick={nextSign}
-                    className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#072012] rounded-xl font-semibold transition-colors"
+                    className="mt-3 w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#072012] rounded-xl font-semibold transition-colors"
                   >
                     {currentSignIndex < signs.length - 1 ? 'Next sign' : 'Finish lesson'}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
-                <>
-                  {bestScore > 0 && (
-                    <div className="text-center p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-                      <p className="text-xs text-gray-500 mb-1">Best this session</p>
-                      <p className={`text-3xl font-bold ${bestScore >= 70 ? 'text-[#1dda63]' : 'text-orange-400'}`}>{bestScore}%</p>
-                      <p className="text-[11px] text-gray-500 mt-1">Reach 50% to pass</p>
-                    </div>
-                  )}
-                  <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 space-y-2">
-                    <button
-                      onClick={() => setStep('watch')}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-white/[0.06] rounded-xl transition-colors"
-                    >
-                      <ArrowLeft className="w-4 h-4" /> Watch again
-                    </button>
-                    <button
-                      onClick={nextSign}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-xl transition-colors"
-                    >
-                      {currentSignIndex < signs.length - 1 ? 'Skip' : 'Skip to quiz'} <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </>
+                <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-3 flex gap-2">
+                  <button
+                    onClick={() => setStep('watch')}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-white/[0.06] rounded-xl transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Watch
+                  </button>
+                  <button
+                    onClick={nextSign}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-xl transition-colors"
+                  >
+                    Skip <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               )}
+
+              {/* Live finger accuracy — always visible */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">Finger accuracy</span>
+                  {liveResult && (
+                    <span className="text-sm font-bold tabular-nums" style={{ color: scoreColor(liveResult.score) }}>
+                      {liveResult.score}%
+                    </span>
+                  )}
+                </div>
+                {liveResult ? (
+                  <div className="space-y-2">
+                    {Object.entries(liveResult.fingerScores).map(([finger, score]) => (
+                      <div key={finger} className="flex items-center gap-2">
+                        <span className="w-12 text-xs text-gray-400 capitalize">{finger}</span>
+                        <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                          <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, backgroundColor: scoreColor(score) }} />
+                        </div>
+                        <span className="w-9 text-right text-xs font-bold tabular-nums" style={{ color: scoreColor(score) }}>{score}%</span>
+                      </div>
+                    ))}
+                    {liveResult.hints.length > 0 && (
+                      <div className="pt-2 mt-1 border-t border-white/10 space-y-1">
+                        {liveResult.hints.map((h, i) => (
+                          <p key={i} className="text-xs text-gray-400 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: scoreColor(liveResult.score) }} />
+                            {h}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">Start the camera and show your hand to see live finger scores.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

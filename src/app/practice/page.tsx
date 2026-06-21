@@ -9,6 +9,10 @@ import { ReferenceImage } from '@/components/signs/ReferenceImage';
 import { useProgressStore } from '@/lib/storage/progress-store';
 import { SignSequence, PoseComparisonResult } from '@/lib/signs/types';
 
+function scoreColor(s: number): string {
+  return s >= 70 ? '#1dda63' : s >= 50 ? '#a3e635' : s >= 35 ? '#f97316' : '#ef4444';
+}
+
 const SignPlayer = dynamic(
   () => import('@/components/avatar/SignPlayer').then(m => ({ default: m.SignPlayer })),
   { ssr: false, loading: () => <div className="w-full h-[300px] bg-gray-100 dark:bg-white/[0.06] rounded-xl animate-pulse" /> }
@@ -158,25 +162,26 @@ export default function PracticePage() {
 
       {/* Practice area */}
       {currentSign && (
-        <div className="grid grid-cols-1 lg:grid-cols-[190px_minmax(0,1fr)_290px] gap-5 items-start">
-          {/* Reference — compact */}
+        <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)_320px] gap-5 items-start">
+          {/* Reference — 3D hand + image (bigger so the hand is usable) */}
           <div className="space-y-3">
             <div className="bg-white dark:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-              <SignPlayer sign={currentSign} showControls={false} className="h-[180px]" />
+              <SignPlayer sign={currentSign} showControls={false} className="h-[220px]" />
             </div>
             <ReferenceImage sign={currentSign} />
           </div>
 
-          {/* Camera + live scores */}
+          {/* Camera (scores in the right column) */}
           <div>
             <WebcamPractice
               targetLandmarks={currentSign.poses[0]?.landmarks || []}
               onScore={handleScore}
+              hideScores
             />
           </div>
 
-          {/* Info */}
-          <div>
+          {/* Right: sign info + always-visible finger scores */}
+          <div className="space-y-3">
             <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <h2 className="text-lg font-bold">{currentSign.gloss}</h2>
@@ -187,6 +192,32 @@ export default function PracticePage() {
               <p className="text-sm text-gray-400 leading-relaxed">{currentSign.description}</p>
               {currentSign.mnemonic && (
                 <p className="text-sm text-[#1dda63] mt-3">Tip: {currentSign.mnemonic}</p>
+              )}
+            </div>
+
+            <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Finger accuracy</span>
+                {lastScore && (
+                  <span className="text-sm font-bold tabular-nums" style={{ color: scoreColor(lastScore.score) }}>
+                    {lastScore.score}%
+                  </span>
+                )}
+              </div>
+              {lastScore ? (
+                <div className="space-y-2">
+                  {Object.entries(lastScore.fingerScores).map(([finger, score]) => (
+                    <div key={finger} className="flex items-center gap-2">
+                      <span className="w-12 text-xs text-gray-400 capitalize">{finger}</span>
+                      <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, backgroundColor: scoreColor(score) }} />
+                      </div>
+                      <span className="w-9 text-right text-xs font-bold tabular-nums" style={{ color: scoreColor(score) }}>{score}%</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">Start the camera and show your hand to see live finger scores.</p>
               )}
             </div>
           </div>

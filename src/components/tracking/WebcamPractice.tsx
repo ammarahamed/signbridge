@@ -40,7 +40,14 @@ interface WebcamPracticeProps {
   // running — we never freeze it.
   onPass?: (score: number) => void;
   passThreshold?: number;
+  // Hide the built-in hints + finger-score panel (the parent renders them).
+  hideScores?: boolean;
   className?: string;
+}
+
+// Exported so callers can render the finger scores themselves and match colours.
+export function scoreColor(s: number): string {
+  return s >= 70 ? '#1dda63' : s >= 50 ? '#a3e635' : s >= 35 ? '#f97316' : '#ef4444';
 }
 
 type HandLandmarkerType = {
@@ -58,7 +65,7 @@ type TasksVision = {
   };
 };
 
-export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold = 60, className = '' }: WebcamPracticeProps) {
+export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold = 60, hideScores = false, className = '' }: WebcamPracticeProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const passedRef = useRef(false);
@@ -316,7 +323,7 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
 
       {isActive && (
         <div className="mt-3 space-y-3">
-          {result && result.hints.length > 0 && (
+          {!hideScores && result && result.hints.length > 0 && (
             <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 space-y-1">
               {result.hints.map((hint, i) => (
                 <p key={i} className="text-sm text-gray-200 flex items-center gap-2">
@@ -327,7 +334,7 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
             </div>
           )}
 
-          {result && (
+          {!hideScores && result && (
             <div className="grid grid-cols-5 gap-2">
               {Object.entries(result.fingerScores).map(([finger, score]) => (
                 <div key={finger} className="rounded-xl bg-white/[0.04] border border-white/10 p-2 text-center">
