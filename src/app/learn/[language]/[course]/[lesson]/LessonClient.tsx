@@ -39,7 +39,6 @@ export default function LessonClient() {
   const [step, setStep] = useState<StepType>('intro');
   const [bestScore, setBestScore] = useState(0);
   const [passed, setPassed] = useState(false);
-  const [capture, setCapture] = useState<{ image: string; score: number } | null>(null);
   const [quizAnswer, setQuizAnswer] = useState<string | null>(null);
   const [quizCorrect, setQuizCorrect] = useState<boolean | null>(null);
 
@@ -60,17 +59,15 @@ export default function LessonClient() {
     setBestScore(b => Math.max(b, result.score));
   }, []);
 
-  // Fired once when the learner passes — freeze on their snapshot, don't auto-advance.
-  const handlePass = useCallback((image: string, score: number) => {
+  // Fired once when the learner passes — show a card, don't auto-advance.
+  const handlePass = useCallback((score: number) => {
     if (!currentSign) return;
-    setCapture({ image, score });
     setPassed(true);
     setBestScore(b => Math.max(b, score));
     recordPractice(currentSign.id, score);
   }, [currentSign, recordPractice]);
 
   const nextSign = () => {
-    setCapture(null);
     setPassed(false);
     if (currentSignIndex < signs.length - 1) {
       setCurrentSignIndex(i => i + 1);
@@ -230,26 +227,18 @@ export default function LessonClient() {
             </div>
           </div>
 
-          {passed && capture ? (
-            <div className="rounded-2xl bg-[#1dda63]/[0.08] border border-[#1dda63]/30 p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <CheckCircle2 className="w-8 h-8 text-[#1dda63] shrink-0" />
-                <div>
-                  <p className="text-lg font-bold text-[#1dda63]">Nice! You signed &ldquo;{currentSign.gloss}&rdquo;</p>
-                  <p className="text-sm text-gray-400">Matched at {capture.score}% — here&apos;s your sign</p>
-                </div>
-              </div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={capture.image} alt={`You signing ${currentSign.gloss}`} className="w-full max-w-sm mx-auto rounded-xl border border-white/10" />
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={nextSign}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#072012] rounded-xl font-semibold transition-colors"
-                >
-                  {currentSignIndex < signs.length - 1 ? 'Next sign' : 'Finish lesson'}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
+          {passed ? (
+            <div className="rounded-2xl bg-[#1dda63]/[0.08] border border-[#1dda63]/30 p-5 text-center">
+              <CheckCircle2 className="w-9 h-9 text-[#1dda63] mx-auto mb-2" />
+              <p className="text-lg font-bold text-[#1dda63]">Nice! You signed &ldquo;{currentSign.gloss}&rdquo; — {bestScore}%</p>
+              <p className="text-sm text-gray-400 mt-1">Keep going, or move on when you&apos;re ready.</p>
+              <button
+                onClick={nextSign}
+                className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-[#1dda63] hover:bg-[#15b850] text-[#072012] rounded-xl font-semibold transition-colors"
+              >
+                {currentSignIndex < signs.length - 1 ? 'Next sign' : 'Finish lesson'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           ) : bestScore > 0 ? (
             <div className="text-center p-4 bg-gray-50 dark:bg-white/[0.06] rounded-xl">

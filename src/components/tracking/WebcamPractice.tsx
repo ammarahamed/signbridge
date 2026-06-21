@@ -36,9 +36,9 @@ function ScoreRing({ score }: { score: number }) {
 interface WebcamPracticeProps {
   targetLandmarks: Landmark[];
   onScore?: (result: PoseComparisonResult) => void;
-  // Fires once when the score first reaches passThreshold, with a snapshot of
-  // the winning frame. The camera then freezes on that frame.
-  onPass?: (image: string, score: number) => void;
+  // Fires once when the score first reaches passThreshold. The camera keeps
+  // running — we never freeze it.
+  onPass?: (score: number) => void;
   passThreshold?: number;
   className?: string;
 }
@@ -160,11 +160,10 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
       }
       drawLandmarks(detected, scores);
 
-      // First time we pass: snapshot the winning frame and freeze on it.
+      // Fire once on the first pass — but keep the camera running (no freeze).
       if (passScore != null && onPass) {
         passedRef.current = true;
-        onPass(captureFrame(), passScore);
-        return;
+        onPass(passScore);
       }
     } else {
       setResult(null);
@@ -232,25 +231,6 @@ export function WebcamPractice({ targetLandmarks, onScore, onPass, passThreshold
     },
     []
   );
-
-  // Composite the current video frame + overlay into a mirrored snapshot.
-  const captureFrame = useCallback((): string => {
-    const video = videoRef.current;
-    const overlay = canvasRef.current;
-    if (!video || !video.videoWidth) return '';
-    const tmp = document.createElement('canvas');
-    tmp.width = video.videoWidth;
-    tmp.height = video.videoHeight;
-    const ctx = tmp.getContext('2d');
-    if (!ctx) return '';
-    ctx.save();
-    ctx.translate(tmp.width, 0);
-    ctx.scale(-1, 1); // mirror to match the on-screen view
-    ctx.drawImage(video, 0, 0, tmp.width, tmp.height);
-    if (overlay && overlay.width) ctx.drawImage(overlay, 0, 0, tmp.width, tmp.height);
-    ctx.restore();
-    return tmp.toDataURL('image/jpeg', 0.85);
-  }, []);
 
   // Re-arm passing whenever the target sign changes.
   useEffect(() => {
